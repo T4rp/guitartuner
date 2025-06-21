@@ -75,6 +75,14 @@ pub fn ditfft2(x: &[Complex], n: usize, s: usize) -> Vec<Complex> {
     output
 }
 
+fn hann_window(input: &mut [f32]) {
+    let len = input.len();
+    for (i, n) in input.iter_mut().enumerate() {
+        let multiplier = 0.5 * (1.0 - (2.0 * PI * i as f32 / len as f32).cos());
+        *n = multiplier * *n
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -89,12 +97,19 @@ mod tests {
 
     #[test]
     fn run_and_plot() {
-        let input: Vec<f32> = (0..300)
+        let mut input: Vec<f32> = (0..100)
             .into_iter()
-            .map(|x| (x as f32 / 20.0 * 2.0).sin())
+            .map(|x| (x as f32 / 10.0 * 10.0).sin())
             .collect();
 
-        let cinput: Vec<Complex> = input.iter().map(|n| Complex::new(*n, 0.0)).collect();
+        let mut windowed_input = input.clone();
+
+        hann_window(&mut windowed_input);
+
+        let cinput: Vec<Complex> = windowed_input
+            .iter()
+            .map(|n| Complex::new(*n, 0.0))
+            .collect();
         let out = ditfft2(&cinput, cinput.len(), 1);
 
         let mut last_largest = 0.0;
@@ -111,7 +126,7 @@ mod tests {
         root.fill(&WHITE).unwrap();
 
         root.draw_text(
-            format!("Largest: {}", max_index_at as f32 / 20.0).as_str(),
+            format!("Largest: {}", max_index_at as f32 / 10.0).as_str(),
             &("sans-serif", 24).into_text_style(&root),
             (0, 0),
         );
@@ -122,7 +137,7 @@ mod tests {
             .right_y_label_area_size(40)
             .margin(5)
             .caption("FFT plot", ("sans-serif", 50.0).into_font())
-            .build_cartesian_2d(0f32..300.0, (-2.0f32..2.0f32))
+            .build_cartesian_2d(0f32..100.0, (-50.0f32..50.0f32))
             .unwrap();
 
         chart
