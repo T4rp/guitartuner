@@ -1,4 +1,5 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use guitartuning::fft::{Complex, ditfft2, hann_window};
 use std::{thread, time::Duration};
 
 fn main() {
@@ -12,13 +13,46 @@ fn main() {
         .with_max_sample_rate()
         .config();
 
+    let sample_rate = config.sample_rate.0;
+
+    thread::sleep(Duration::from_secs(2));
+
     let stream = default_input
         .build_input_stream(
             &config,
             move |data: &[f32], _: &cpal::InputCallbackInfo| {
-                println!("{}", data[0]);
-                println!("{}", data.last().unwrap());
-                println!("{}", data.len());
+                let mut input = data.to_vec();
+                hann_window(&mut input);
+
+                let input: Vec<Complex> = input.into_iter().map(|x| Complex::new(x, 0.0)).collect();
+                let output = ditfft2(&input, input.len(), 1);
+
+                let mut last_largest = 0.0;
+                let mut max_index_at = 0;
+
+                for (i, x) in output.iter().enumerate() {
+                    if x.re > last_largest {
+                        last_largest = x.re;
+                        max_index_at = i
+                    }
+                }
+
+                let max_freq = max_index_at as f32 * sample_rate as f32 / input.len() as f32;
+
+                let freq = if max_index_at == 0 || max_index_at == output.len() {
+                    max_freq
+                } else {
+                    let alpha = output[max_index_at - 1].re;
+                    let beta = output[max_index_at].re;
+                    let gamma = output[max_index_at + 1].re;
+
+                    // parabolic interpolation
+                    max_freq + 0.5 * (alpha - gamma) / (alpha - 2.0 * beta + gamma)
+                };
+
+                if freq > 50.0 && freq < 500.0 {
+                    println!("{} hz", freq);
+                }
             },
             move |err| {
                 eprintln!("{}", err);

@@ -10,7 +10,7 @@ pub struct Complex {
 }
 
 impl Complex {
-    fn new(re: f32, im: f32) -> Self {
+    pub fn new(re: f32, im: f32) -> Self {
         Self { re, im }
     }
 }
@@ -75,7 +75,7 @@ pub fn ditfft2(x: &[Complex], n: usize, s: usize) -> Vec<Complex> {
     output
 }
 
-fn hann_window(input: &mut [f32]) {
+pub fn hann_window(input: &mut [f32]) {
     let len = input.len();
     for (i, n) in input.iter_mut().enumerate() {
         let multiplier = 0.5 * (1.0 - (2.0 * PI * i as f32 / len as f32).cos());
