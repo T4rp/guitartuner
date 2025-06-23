@@ -1,6 +1,8 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use guitartuning::fft::{Complex, ditfft2, hann_window};
+use guitartuning::fft::{Complex, ditfft2, hann_window, hann_window_cpx};
 use std::{thread, time::Duration};
+
+const FFT_SIZE: usize = 4096;
 
 fn main() {
     let host = cpal::default_host();
@@ -17,14 +19,18 @@ fn main() {
 
     thread::sleep(Duration::from_secs(2));
 
+    let mut input: Vec<Complex> = vec![Complex::new(0.0, 0.0); FFT_SIZE];
+
     let stream = default_input
         .build_input_stream(
             &config,
             move |data: &[f32], _: &cpal::InputCallbackInfo| {
-                let mut input = data.to_vec();
-                hann_window(&mut input);
+                for (i, m) in data.iter().take(FFT_SIZE).enumerate() {
+                    input[i] = Complex::new(*m, 0.0);
+                }
 
-                let input: Vec<Complex> = input.into_iter().map(|x| Complex::new(x, 0.0)).collect();
+                hann_window_cpx(&mut input);
+
                 let output = ditfft2(&input, input.len(), 1);
 
                 let mut last_largest = 0.0;
@@ -50,9 +56,7 @@ fn main() {
                     max_freq + 0.5 * (alpha - gamma) / (alpha - 2.0 * beta + gamma)
                 };
 
-                if freq > 50.0 && freq < 500.0 {
-                    println!("{} hz", freq);
-                }
+                println!("{} hz", freq);
             },
             move |err| {
                 eprintln!("{}", err);

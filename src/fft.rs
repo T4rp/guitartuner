@@ -1,6 +1,6 @@
 use std::{
     f32::consts::PI,
-    ops::{Add, AddAssign, Mul, MulAssign},
+    ops::{Add, AddAssign, Mul, MulAssign, Sub},
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -22,6 +22,17 @@ impl Add for Complex {
         Complex {
             re: self.re + rhs.re,
             im: self.im + rhs.im,
+        }
+    }
+}
+
+impl Sub for Complex {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Complex {
+            re: self.re - rhs.re,
+            im: self.im - rhs.im,
         }
     }
 }
@@ -69,7 +80,7 @@ pub fn ditfft2(x: &[Complex], n: usize, s: usize) -> Vec<Complex> {
     for k in 0..(n / 2) {
         let q = exp_im(-2.0 * PI * k as f32 * n as f32) * odd[k];
         output[k] = even[k] + q;
-        output[k + n / 2] = even[k] + (q * Complex::new(-1.0, 0.0))
+        output[k + n / 2] = even[k] - q
     }
 
     output
@@ -80,6 +91,14 @@ pub fn hann_window(input: &mut [f32]) {
     for (i, n) in input.iter_mut().enumerate() {
         let multiplier = 0.5 * (1.0 - (2.0 * PI * i as f32 / len as f32).cos());
         *n *= multiplier
+    }
+}
+
+pub fn hann_window_cpx(input: &mut [Complex]) {
+    let len = input.len();
+    for (i, n) in input.iter_mut().enumerate() {
+        let multiplier = 0.5 * (1.0 - (2.0 * PI * i as f32 / len as f32).cos());
+        n.re *= multiplier;
     }
 }
 
@@ -99,7 +118,7 @@ mod tests {
     fn run_and_plot() {
         let mut input: Vec<f32> = (0..100)
             .into_iter()
-            .map(|x| (x as f32 / 10.0 * 10.0).sin())
+            .map(|x| (x as f32 / 10.0 * 4.0).sin())
             .collect();
 
         let mut windowed_input = input.clone();
