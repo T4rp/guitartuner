@@ -79,7 +79,7 @@ pub fn hann_window(input: &mut [f32]) {
     let len = input.len();
     for (i, n) in input.iter_mut().enumerate() {
         let multiplier = 0.5 * (1.0 - (2.0 * PI * i as f32 / len as f32).cos());
-        *n = multiplier * *n
+        *n *= multiplier
     }
 }
 
